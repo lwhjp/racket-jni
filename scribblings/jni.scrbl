@@ -4,12 +4,23 @@
 @(require (for-label racket/base
                      racket/class
                      racket/contract/base
-                     (except-in ffi/unsafe ->)
                      jni))
 
 @defmodule[jni]
 
+This library provides interoperability with a Java Runtime Environment
+via the C JNI interface. Although the wrappers provide a Racket-like interface,
+it is possible for unexpected usage patterns to corrupt or crash the
+Racket process. This whole library should be considered unsafe, and not used
+with untrusted code.
+
+In particular, there are likely to be bugs. Save your work before running.
+
 @section{Low Level Interface}
+
+@defmodule[jni/unsafe]
+@(require (for-label (except-in ffi/unsafe ->)
+                     jni/unsafe))
 
 These interfaces provide access to the raw C API with minimal wrapping.
 Needless to say, it is easy to cause memory corruption and crashes if
