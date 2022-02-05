@@ -1,13 +1,15 @@
 #lang racket/base
 
 (require (for-syntax racket/base
+                     racket/list
                      racket/string
                      racket/syntax
                      syntax/parse)
          racket/class
          racket/splicing
          racket/stxparam
-         ffi/unsafe)
+         ffi/unsafe
+         "types.rkt")
 
 (provide (all-defined-out))
 
@@ -56,3 +58,63 @@
                  (apply (if-method (ptr-ref this-pointer _if-pointer))
                         this-pointer
                         args)) ...))))]))
+
+(define-syntax-parameter _T #f)
+(define-syntax-parameter _Tarray #f)
+(define-syntax-parameter _Tarray/null #f)
+
+(define-syntax (define-jni-interface* stx)
+  (define-splicing-syntax-class clause
+    #:attributes ([expanded 1])
+    (pattern
+     (~seq #:for-types (types:id) ([method-id:id method-type] ...))
+     #:attr [expanded 1]
+     (append*
+      (for/list ([t (in-string (symbol->string (syntax-e #'types)))])
+        (define-values (type-name _type _typeArray _typeArray/null)
+          (case t
+            [(#\V) (values "Void" #'_void #f #f)]
+            [(#\L) (values "Object" #'_jobject/null #'_jobjectArray #'_jobjectArray/null)]
+            [(#\Z) (values "Boolean" #'_jboolean #'_jbooleanArray #'_jbooleanArray/null)]
+            [(#\B) (values "Byte" #'_jbyte #'_jbyteArray #'_jbyteArray/null)]
+            [(#\C) (values "Char" #'_jchar #'_jcharArray #'_jcharArray/null)]
+            [(#\S) (values "Short" #'_jshort #'_jshortArray #'_jshortArray/null)]
+            [(#\I) (values "Int" #'_jint #'_jintArray #'_jintArray/null)]
+            [(#\J) (values "Long" #'_jlong #'_jlongArray #'_jlongArray/null)]
+            [(#\F) (values "Float" #'_jfloat #'_jfloatArray #'_jfloatArray/null)]
+            [(#\D) (values "Double" #'_jdouble #'_jdoubleArray #'_jdoubleArray/null)]
+            [else (raise-syntax-error #f
+                                      (format "invalid type specifier: ~e" t)
+                                      this-syntax
+                                      #'types)]))
+        (with-syntax ([(method-id* ...)
+                       (map (λ (id)
+                              (datum->syntax
+                               id
+                               (string->symbol
+                                (string-replace
+                                 (symbol->string (syntax-e id))
+                                 "_T_"
+                                 type-name))))
+                            (syntax->list #'(method-id ...)))])
+          (syntax->list
+           #`([method-id*
+               (syntax-parameterize
+                   ([_T (make-rename-transformer #'#,_type)]
+                    [_Tarray #,(and _typeArray #`(make-rename-transformer #'#,_typeArray))]
+                    [_Tarray/null #,(and _typeArray/null #`(make-rename-transformer #'#,_typeArray/null))])
+                 method-type)]
+              ...))))))
+    (pattern
+     (~seq any)
+     #:attr [expanded 1]
+     (list #'any)))
+  (syntax-parse stx
+    [(_ id<%>:id
+        #:interface-type _if
+        #:reserved reserved:nat
+        (c:clause ...))
+     #'(define-jni-interface id<%>
+         #:interface-type _if
+         #:reserved reserved
+         (c.expanded ... ...))]))

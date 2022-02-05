@@ -1,6 +1,7 @@
 #lang racket/base
 
-(require ffi/unsafe
+(require racket/class
+         ffi/unsafe
          "env.rkt"
          "error.rkt"
          "interface.rkt"
@@ -42,3 +43,5 @@
           [args : _JavaVMAttachArgs-pointer/null]
           -> [r : _jint]
           -> (return/check r env))]))
+
+(define (wrap-vm ptr) (make-object JavaVM% ptr))

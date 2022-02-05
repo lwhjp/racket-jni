@@ -33,6 +33,15 @@
 (define-cpointer-type _jdoubleArray _jarray)
 (define-cpointer-type _jthrowable _jobject)
 
+(define-cpointer-type _jweak _jobject)
+
+(define _jobjectRefType
+  (_enum
+   '(JNIInvalidRefType
+     JNILocalRefType
+     JNIGlobalRefType
+     JNIWeakGlobalRefType)))
+
 ; ids
 (define-cpointer-type _jfieldID)
 (define-cpointer-type _jmethodID)
@@ -81,3 +90,6 @@
 (define JNI_VERSION_1_8 #x00010008)
 (define JNI_VERSION_9   #x00090000)
 (define JNI_VERSION_10  #x000a0000)
+
+(define JNI_COMMIT 1)
+(define JNI_ABORT 2)
