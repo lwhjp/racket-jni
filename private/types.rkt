@@ -1,7 +1,8 @@
 #lang racket/base
 
 (require racket/list
-         ffi/unsafe)
+         ffi/unsafe
+         "mutf8.rkt")
 
 (provide (all-defined-out))
 
@@ -64,6 +65,13 @@
    (or (index-of '(z b c s i j f d l) which)
        (error 'jvalue-ref "invalid member specifier: ~a" which))
    e))
+
+; modified utf8 strings
+(define _string/modified-utf-8
+  (make-ctype
+   _bytes/nul-terminated
+   (λ (v) (and v (string->bytes/modified-utf-8 v)))
+   (λ (v) (and v (bytes->string/modified-utf-8 v)))))
 
 ; version codes
 (define JNI_VERSION_1_1 #x00010001)

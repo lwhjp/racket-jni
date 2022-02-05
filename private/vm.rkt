@@ -10,7 +10,7 @@
 
 (define-cstruct _JavaVMAttachArgs
   ([version _jint]
-   [name _string/locale] ; XXX: modified-utf8
+   [name _string/modified-utf-8]
    [group _jobject/null]))
 
 (define-jni-interface JavaVM<%>
