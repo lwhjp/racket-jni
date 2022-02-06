@@ -4,7 +4,8 @@
 @(require (for-label racket/base
                      racket/class
                      racket/contract/base
-                     jni))
+                     jni
+                     jni/unsafe))
 
 @defmodule[jni]
 
@@ -16,11 +17,31 @@ with untrusted code.
 
 In particular, there are likely to be bugs. Save your work before running.
 
+@section{Attaching to the JVM}
+
+@defproc*[([(current-jni-env) (or/c (is-a?/c JNIEnv<%>) #f)]
+           [(current-jni-env [env (or/c (is-a?/c JNIEnv<%>) #f)]) void?])]{
+  Get or set the current thread-local JNI environment interface.
+}
+
+@defproc[(require-jni-env) (is-a?/c JNIEnv<%>)]{
+  Same as @racket[(current-jni-env)], but raises an error if the value is @racket[#f].
+}
+
+@defproc[(with-jni-env [env (is-a?/c JNIEnv<%>)] [thunk (-> any)]) any]{
+  Evaluates @racket[(thunk)] with @racket[(current-jni-env)] set to return @racket[env]
+  during the dynamic scope of @racket[thunk].
+}
+
+@defform[(let-jni-env env body ...+)
+         #:contracts ([env (is-a?/c JNIEnv<%>)])]{
+  Convenience wrapper for @racket[with-jni-env].
+}
+
 @section{Low Level Interface}
 
 @defmodule[jni/unsafe]
-@(require (for-label (except-in ffi/unsafe ->)
-                     jni/unsafe))
+@(require (for-label (except-in ffi/unsafe ->)))
 
 These interfaces provide access to the raw C API with minimal wrapping.
 Needless to say, it is easy to cause memory corruption and crashes if
