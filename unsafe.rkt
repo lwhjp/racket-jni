@@ -1,19 +1,14 @@
 #lang racket/base
 
-(require "private/env.rkt"
-         "private/error.rkt"
+(require "private/error.rkt"
          "private/jni.rkt"
          "private/mutf8.rkt"
-         "private/types.rkt"
-         "private/vm.rkt")
+         "private/types.rkt")
 
 (provide (except-out
-          (all-from-out "private/env.rkt"
-                        "private/jni.rkt"
+          (all-from-out "private/jni.rkt"
                         "private/types.rkt"
-                        "private/mutf8.rkt"
-                        "private/vm.rkt")
+                        "private/mutf8.rkt")
           JNIEnv%
-          JavaVM%
-          wrap-vm)
+          JavaVM%)
          (struct-out exn:fail:jni))
