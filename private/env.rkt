@@ -129,11 +129,12 @@
 
 (define weak-reference%
   (class* reference% ()
-    (inherit get-pointer)
     (super-new)
     (define/override (->weak-reference) this)
     (define/augment (delete)
-      (send (require-jni-env) DeleteWeakGlobalRef (get-pointer)))))
+      (send (require-jni-env) DeleteWeakGlobalRef (super get-pointer)))
+    (define/override (get-pointer)
+      (error "access through weak reference"))))
 
 (define local-reference%
   (class* reference% ()
