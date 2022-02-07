@@ -17,7 +17,65 @@ with untrusted code.
 
 In particular, there are likely to be bugs. Save your work before running.
 
+@section{High-level wrappers}
+
+@subsection{Object wrappers}
+
+@defclass[jobject% object% (reference<%>)]{
+  Represents an instance of Java @tt{Object}. All other object wrappers inherit
+  from this class.
+
+  @defmethod[(get-class) (is-a?/c jclass%)]
+  @defmethod[(get-ref-type) exact-integer?]
+  @defmethod[(instance-of? [clazz (is-a?/c jclass%)]) boolean?]
+  @defmethod[(same-object? [obj (is-a?/c jobject%)]) boolean?]
+}
+
+@defclass[jclass% jobject% ()]{
+  Represents a Java class.
+
+  @defmethod[(get-superclass) (or/c (is-a?/c jclass%) #f)]{
+    Returns the superclass of this class, or @racket[#f] if this class is
+    @tt{Object} or an interface.
+  }
+  @defmethod[(assignable-from? [cls (is-a?/c jclass%)]) boolean?]{
+    Returns @racket[#t] if @racket[cls] is a subclass of (or the same as) this class.
+  }
+}
+
+@defclass[jstring% jobject% ()]{
+  Represents a Java string.
+
+  @defmethod[(get-length) exact-nonnegative-integer?]
+}
+
+@subsection{References}
+@definterface[reference<%> ()]{
+  This interface represents a reference to a Java object.
+
+  @defmethod[(->weak-reference) (is-a?/c reference<%>)]{
+    Returns a new weak reference for the same object. Weak references may
+    not be dereferenced: convert to a local or global reference first.
+  }
+  @defmethod[(->local-reference) (or/c (is-a?/c reference<%>) #f)]{
+    Returns a new local reference for the same object. If the current reference
+    is a weak reference which has already been collected, this method returns @racket[#f].
+  }
+  @defmethod[(->global-reference) (or/c (is-a?/c reference<%>) #f)]{
+    Returns a new global reference for the same object. If the current reference
+    is a weak reference which has already been collected, this method returns @racket[#f].
+  }
+  @defmethod[(delete) void?]{
+    Releases the reference. It is an error to use the reference after calling this method.
+  }
+  @defmethod[(get-pointer) jobject?]{
+    Returns a pointer to the referenced object. Best not to use this unless you know what you're doing.
+  }
+}
+
 @section{Attaching to the JVM}
+
+These functions are dangerous, and may change or be removed.
 
 @defproc*[([(current-jni-env) (or/c (is-a?/c JNIEnv<%>) #f)]
            [(current-jni-env [env (or/c (is-a?/c JNIEnv<%>) #f)]) void?])]{
@@ -36,6 +94,16 @@ In particular, there are likely to be bugs. Save your work before running.
 @defform[(let-jni-env env body ...+)
          #:contracts ([env (is-a?/c JNIEnv<%>)])]{
   Convenience wrapper for @racket[with-jni-env].
+}
+
+@defproc[(with-jni-scope [thunk (-> any)]) any]{
+  Wraps a JNI scope: local references associated with the scope will be marked as invalid
+  when @racket[thunk] exits.
+}
+
+@defproc[(with-jni-frame [thunk (-> (or/c (is-a? reference<%>) #f))]) (or/c (is-a? reference<%>) #f)]{
+  Creates a new local frame. You can return a local reference from @racket[thunk], which will
+  be converted to a local reference in the parent frame.
 }
 
 @section{Low Level Interface}
