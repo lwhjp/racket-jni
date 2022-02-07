@@ -17,6 +17,31 @@ with untrusted code.
 
 In particular, there are likely to be bugs. Save your work before running.
 
+@section{Getting Started}
+
+This is a work-in-progress, and only suitable for experimentation at this point.
+Stay tuned!
+
+If you're familiar with JNI and the Racket FFI, try this to get started:
+
+@codeblock|{
+#lang racket
+
+(require racket/class
+         jni
+         jni/unsafe)
+
+(let-jni-env (get-jni-env)
+  (define env (require-jni-env))
+  (println (send env GetVersion))
+  (with-jni-scope
+    (λ ()
+      (define sptr (send env NewString "hello, java"))
+      (define s (new jstring% [ref (new local-reference% [_type _jstring] [pointer sptr])]))
+      (println (send s get-length))
+      (send s delete))))
+}|
+
 @section{High-level wrappers}
 
 @subsection{Object wrappers}
