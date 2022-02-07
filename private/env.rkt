@@ -71,6 +71,17 @@
      (thread-cell-set! local-jni-scope old-scope)
      (will-try-execute reference-cleanup-executor (void)))))
 
+(define (with-jni-frame capacity thunk)
+  (define-values (old-ref new-ptr)
+    (with-jni-scope
+     (λ ()
+       (send (require-jni-env) PushLocalFrame capacity)
+       (define result (thunk))
+       (values
+        result
+        (send (require-jni-env) PopLocalFrame (and result (send result get-pointer)))))))
+  (and new-ptr (send old-ref clone-with-new-pointer new-ptr)))
+
 ; references
 
 (define reference<%>
@@ -79,7 +90,8 @@
     ->local-reference
     ->global-reference
     delete
-    get-pointer))
+    get-pointer
+    clone-with-new-pointer))
 
 (define reference%
   (class* object% (reference<%>)
@@ -104,6 +116,10 @@
     (define/public (get-pointer)
       (or (unbox ptr)
           (error "invalid reference")))
+    (define/public (clone-with-new-pointer p)
+      (new this%
+           [_type _type]
+           [pointer p]))
     (define/public (clear)
       (set-box! ptr #f))
     (define/pubment (delete)
