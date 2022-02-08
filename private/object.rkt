@@ -133,7 +133,11 @@
                      (get-pointer)
                      (send c get-pointer)
                      (method-id-ptr m)
-                     (unwrap-args args))))))
+                     (unwrap-args args))))
+    (define/public (monitor-enter)
+      (send (require-jni-env) MonitorEnter (get-pointer)))
+    (define/public (monitor-exit)
+      (send (require-jni-env) MonitorExit (get-pointer)))))
 
 (define (alloc-jobject clazz)
   (wrap-object/local (send (require-jni-env) AllocObject (send clazz get-pointer))))

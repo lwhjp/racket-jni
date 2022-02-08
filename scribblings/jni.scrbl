@@ -70,6 +70,8 @@ If you're familiar with JNI and the Racket FFI, try this to get started:
   @defmethod[(get-method-id [name string?] [sig string?]) method-id?]
   @defmethod[(call-method [m method-id?] [arg any/c] ...) any/c]
   @defmethod[(call-nonvirtual-method [m method-id?] [c (is-a?/c jclass%)] [arg any/c] ...) any/c]
+  @defmethod[(monitor-enter) void?]
+  @defmethod[(monitor-exit) void?]
 }
 
 @defproc[(alloc-jobject [clazz (is-a?/c jclass%)]) (is-a?/c jobject%)]{
