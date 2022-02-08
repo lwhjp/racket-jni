@@ -54,6 +54,8 @@ If you're familiar with JNI and the Racket FFI, try this to get started:
   Predicate for (wrapped) JNI method IDs.
 }
 
+@subsubsection{@tt{Object}}
+
 @defclass[jobject% object% (reference<%>)]{
   Represents an instance of Java @tt{Object}. All other object wrappers inherit
   from this class.
@@ -81,6 +83,8 @@ If you're familiar with JNI and the Racket FFI, try this to get started:
   Creates a new Java object of class @racket[clazz], calling the specified constructor
   @racket[ctor].
 }
+
+@subsubsection{@tt{Class}}
 
 @defclass[jclass% jobject% ()]{
   Represents a Java class.
@@ -110,10 +114,20 @@ If you're familiar with JNI and the Racket FFI, try this to get started:
   Find an existing Java class by name or throws an exception if not found.
 }
 
+@subsubsection{@tt{String}}
+
 @defclass[jstring% jobject% ()]{
   Represents a Java string.
 
   @defmethod[(get-length) exact-nonnegative-integer?]
+  @defmethod[(get-chars) string?]
+  @defmethod[(get-region [start exact-nonnegative-integer?]
+                         [len exact-positive-integer?])
+             string?]
+}
+
+@defproc[(new-jstring [str string?]) (is-a?/c jstring%)]{
+  Creates a new Java string.
 }
 
 @subsection{References}

@@ -3,6 +3,7 @@
 (require racket/class
          racket/match
          racket/string
+         ffi/unsafe
          "env.rkt"
          "signature.rkt"
          "types.rkt")
@@ -15,7 +16,8 @@
          jclass%
          define-jclass
          find-jclass
-         jstring%)
+         jstring%
+         new-jstring)
 
 (define (signature-return-type sig)
   (match sig
@@ -199,8 +201,23 @@
     (super-new)
     (define/public (get-length)
       (send (require-jni-env) GetStringLength (get-pointer)))
-    ; TODO: get chars; get region
-    ))
+    (define/public (get-chars)
+      (define env (require-jni-env))
+      (let-values ([(p copy?) (send env GetStringUTFChars (get-pointer))])
+        (begin0
+          (cast p _pointer _string/modified-utf-8)
+          (send env ReleaseStringUTFChars (get-pointer) p))))
+    (define/public (get-region start len)
+      (send (require-jni-env)
+            GetStringUTFRegion
+            (get-pointer)
+            start
+            len))))
+
+(define (new-jstring str)
+  (wrap/local jstring%
+              _jstring
+              (send (require-jni-env) NewStringUTF8 str)))
 
 ; TODO: arrays
 ; TODO: throwable
