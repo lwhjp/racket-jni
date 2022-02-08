@@ -179,7 +179,7 @@
     (define/public (get-static-method-id name sig)
       (method-id (send (require-jni-env) GetStaticMethodID (get-pointer) name sig)
                  (parse-signature sig)))
-    (define/public (call-method m . args)
+    (define/public (call-static-method m . args)
       (wrap/sig
        (method-id-sig m)
        (dynamic-send (require-jni-env)
