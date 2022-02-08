@@ -46,6 +46,14 @@ If you're familiar with JNI and the Racket FFI, try this to get started:
 
 @subsection{Object wrappers}
 
+@defproc[(field-id? [v any/c]) boolean?]{
+  Predicate for (wrapped) JNI field IDs.
+}
+
+@defproc[(method-id? [v any/c]) boolean?]{
+  Predicate for (wrapped) JNI method IDs.
+}
+
 @defclass[jobject% object% (reference<%>)]{
   Represents an instance of Java @tt{Object}. All other object wrappers inherit
   from this class.
@@ -54,6 +62,24 @@ If you're familiar with JNI and the Racket FFI, try this to get started:
   @defmethod[(get-ref-type) exact-integer?]
   @defmethod[(instance-of? [clazz (is-a?/c jclass%)]) boolean?]
   @defmethod[(same-object? [obj (is-a?/c jobject%)]) boolean?]
+  @defmethod[(get-field-id [name string?] [sig string?]) field-id?]
+  @defmethod[(get-field [f field-id?]) any/c]
+  @defmethod[(set-field! [f field-id?] [v any/c]) void?]
+  @defmethod[(get-method-id [name string?] [sig string?]) method-id?]
+  @defmethod[(call-method [m method-id?] [arg any/c] ...) any/c]
+  @defmethod[(call-nonvirtual-method [m method-id?] [c (is-a?/c jclass%)] [arg any/c] ...) any/c]
+}
+
+@defproc[(alloc-jobject [clazz (is-a?/c jclass%)]) (is-a?/c jobject%)]{
+  Allocates (but does not initialize) a Java object. You probably don't want to use this.
+}
+
+@defproc[(new-jobject [clazz (is-a?/c jclass%)]
+                      [ctor method-id?]
+                      [arg any/c] ...)
+         (is-a?/c jobject%)]{
+  Creates a new Java object of class @racket[clazz], calling the specified constructor
+  @racket[ctor].
 }
 
 @defclass[jclass% jobject% ()]{
@@ -66,6 +92,22 @@ If you're familiar with JNI and the Racket FFI, try this to get started:
   @defmethod[(assignable-from? [cls (is-a?/c jclass%)]) boolean?]{
     Returns @racket[#t] if @racket[cls] is a subclass of (or the same as) this class.
   }
+  @defmethod[(get-static-field-id [name string?] [sig string?]) field-id?]
+  @defmethod[(get-static-field [f field-id?]) any/c]
+  @defmethod[(set-static-field! [f field-id?] [v any/c]) void?]
+  @defmethod[(get-static-method-id [name string?] [sig string?]) method-id?]
+  @defmethod[(call-static-method [m method-id?] [arg any/c] ...) any/c]
+}
+
+@defproc[(define-jclass [name string?]
+                        [buf bytes?]
+                        [loader (or/c (is-a?/c jobject%) #f) #f])
+         (is-a?/c jclass%)]{
+  Defines a new Java class from bytecode.
+}
+
+@defproc[(find-jclass [name string?]) (is-a?/c jclass%)]{
+  Find an existing Java class by name or throws an exception if not found.
 }
 
 @defclass[jstring% jobject% ()]{
