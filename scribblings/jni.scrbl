@@ -132,6 +132,45 @@ If you're familiar with JNI and the Racket FFI, try this to get started:
   Creates a new Java string.
 }
 
+@subsubsection{Exceptions (@tt{Throwable})}
+
+@defclass[jthrowable% jobject% ()]{
+  Represents an instance of a Java @tt{Throwable}.
+}
+
+@defproc[(jni-throw [t (is-a?/c jthrowable%)]) void?]{
+  Throws @racket[t] as a Java exception. Note that this does @emph{not} result
+  in a Racket exception: you should return normally without calling any other
+  JNI functions to allow propagation to continue on the Java side.
+}
+
+@defproc[(jni-throw/new [jclass (is-a?/c jclass%)]
+                          [message (or/c string? #f) #f])
+           void?]{
+  Throws a new instance of @racket[jclass] (which must be a subclass of @tt{Throwable}).
+  See @racket[jni-throw] for semantics.
+}
+
+@defproc[(jni-exception-thrown?) boolean?]{
+  Check whether a Java exception is pending.
+}
+
+@defproc[(jni-get-exception) (or/c (is-a?/c jthrowable%) #f)]{
+  Returns the pending exception, if any, or @racket[#f] if all is well.
+}
+
+@defproc[(jni-describe-exception) void?]{
+  Causes the JVM to dump debug information about the pending exception to stderr.
+}
+
+@defproc[(jni-clear-exception!) void?]{
+  Clear any pending Java exception.
+}
+
+@defproc[(jni-fatal-error! [msg (or/c string? #f) #f]) void?]{
+  Causes the JVM to exit immediately, taking your Racket process with it.
+}
+
 @subsection{References}
 @definterface[reference<%> ()]{
   This interface represents a reference to a Java object.

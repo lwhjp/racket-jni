@@ -17,7 +17,15 @@
          define-jclass
          find-jclass
          jstring%
-         new-jstring)
+         new-jstring
+         jthrowable%
+         jni-throw
+         jni-throw/new
+         jni-exception-pending?
+         jni-get-exception
+         jni-describe-exception
+         jni-clear-exception!
+         jni-fatal-error!)
 
 (define (signature-return-type sig)
   (match sig
@@ -224,4 +232,31 @@
               (send (require-jni-env) NewStringUTF8 str)))
 
 ; TODO: arrays
-; TODO: throwable
+
+(define jthrowable%
+  (class jobject%
+    (inherit get-pointer)
+    (super-new)))
+
+(define (jni-throw t)
+  (send (require-jni-env) Throw (send t get-pointer)))
+
+(define (jni-throw/new jclass [message #f])
+  (send (require-jni-env) ThrowNew (send jclass get-pointer) message))
+
+(define (jni-exception-pending?)
+  (send (require-jni-env) ExceptionCheck))
+
+(define (jni-get-exception)
+  (wrap/local jthrowable%
+              _jthrowable
+              (send (require-jni-env) ExceptionOccurred)))
+
+(define (jni-describe-exception)
+  (send (require-jni-env) ExceptionDescribe))
+
+(define (jni-clear-exception!)
+  (send (require-jni-env) ExceptionClear))
+
+(define (jni-fatal-error! [msg #f])
+  (send (require-jni-env) FatalError msg))
