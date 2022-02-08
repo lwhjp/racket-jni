@@ -1,5 +1,5 @@
 #lang info
 (define collection "jni")
-(define deps '("base"))
+(define deps '("base" "parser-tools-lib"))
 (define build-deps '("racket-doc" "rackunit-lib" "scribble-lib"))
 (define scribblings '(("scribblings/jni.scrbl" () (interop))))
