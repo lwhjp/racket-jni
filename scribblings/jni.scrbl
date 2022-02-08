@@ -74,15 +74,15 @@ If you're familiar with JNI and the Racket FFI, try this to get started:
   @defmethod[(monitor-exit) void?]
 }
 
-@defproc[(alloc-jobject [clazz (is-a?/c jclass%)]) (is-a?/c jobject%)]{
+@defproc[(jni-alloc-object [class (is-a?/c jclass%)]) (is-a?/c jobject%)]{
   Allocates (but does not initialize) a Java object. You probably don't want to use this.
 }
 
-@defproc[(new-jobject [clazz (is-a?/c jclass%)]
-                      [ctor method-id?]
-                      [arg any/c] ...)
+@defproc[(jni-new-object [class (is-a?/c jclass%)]
+                         [ctor method-id?]
+                         [arg any/c] ...)
          (is-a?/c jobject%)]{
-  Creates a new Java object of class @racket[clazz], calling the specified constructor
+  Creates a new Java object of class @racket[class], calling the specified constructor
   @racket[ctor].
 }
 
@@ -105,14 +105,14 @@ If you're familiar with JNI and the Racket FFI, try this to get started:
   @defmethod[(call-static-method [m method-id?] [arg any/c] ...) any/c]
 }
 
-@defproc[(define-jclass [name string?]
-                        [buf bytes?]
-                        [loader (or/c (is-a?/c jobject%) #f) #f])
+@defproc[(jni-define-class [name string?]
+                           [buf bytes?]
+                           [loader (or/c (is-a?/c jobject%) #f) #f])
          (is-a?/c jclass%)]{
   Defines a new Java class from bytecode.
 }
 
-@defproc[(find-jclass [name string?]) (is-a?/c jclass%)]{
+@defproc[(jni-find-class [name string?]) (is-a?/c jclass%)]{
   Find an existing Java class by name or throws an exception if not found.
 }
 
@@ -128,7 +128,7 @@ If you're familiar with JNI and the Racket FFI, try this to get started:
              string?]
 }
 
-@defproc[(new-jstring [str string?]) (is-a?/c jstring%)]{
+@defproc[(jni-new-string [str string?]) (is-a?/c jstring%)]{
   Creates a new Java string.
 }
 

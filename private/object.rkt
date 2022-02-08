@@ -11,13 +11,13 @@
 (provide field-id?
          method-id?
          jobject%
-         alloc-jobject
-         new-jobject
+         jni-alloc-object
+         jni-new-object
          jclass%
-         define-jclass
-         find-jclass
+         jni-define-class
+         jni-find-class
          jstring%
-         new-jstring
+         jni-new-string
          jthrowable%
          jni-throw
          jni-throw/new
@@ -147,14 +147,14 @@
     (define/public (monitor-exit)
       (send (require-jni-env) MonitorExit (get-pointer)))))
 
-(define (alloc-jobject clazz)
-  (wrap-object/local (send (require-jni-env) AllocObject (send clazz get-pointer))))
+(define (jni-alloc-object class)
+  (wrap-object/local (send (require-jni-env) AllocObject (send class get-pointer))))
 
-(define (new-jobject clazz ctor . args)
+(define (jni-new-object class ctor . args)
   (wrap-object/local
    (send (require-jni-env)
          NewObjectA
-         (send clazz get-pointer)
+         (send class get-pointer)
          (method-id-ptr ctor)
          (unwrap-args args))))
 
@@ -196,7 +196,7 @@
                      (method-id-ptr m)
                      (unwrap-args args))))))
 
-(define (define-jclass name buf [loader #f])
+(define (jni-define-class name buf [loader #f])
   (wrap-class/local
    (send (require-jni-env)
          DefineClass
@@ -204,7 +204,7 @@
          (and loader (send loader get-pointer))
          buf)))
 
-(define (find-jclass name)
+(define (jni-find-class name)
   (wrap-class/local (send (require-jni-env) FindClass name)))
 
 (define jstring%
@@ -226,7 +226,7 @@
             start
             len))))
 
-(define (new-jstring str)
+(define (jni-new-string str)
   (wrap/local jstring%
               _jstring
               (send (require-jni-env) NewStringUTF8 str)))
