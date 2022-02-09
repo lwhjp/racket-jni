@@ -2,11 +2,15 @@
 
 (provide (all-defined-out))
 
-(struct exn:fail:jni exn:fail (code))
+(struct exn:fail:jni exn:fail ())
+
+(struct exn:fail:jni:error exn:fail:jni (code))
+
+(struct exn:fail:jni:throw exn:fail:jni (object))
 
 (define (raise-jni-error code)
   (raise
-   (exn:fail:jni
+   (exn:fail:jni:error
     (case code
       [(-2) "thread detached from VM"]
       [(-3) "JNI version error"]

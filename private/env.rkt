@@ -2,6 +2,7 @@
 
 (require racket/class
          ffi/unsafe
+         "error.rkt"
          "jni.rkt")
 
 (provide (all-defined-out))
@@ -74,12 +75,23 @@
 (define (with-jni-frame capacity thunk)
   (define-values (old-ref new-ptr)
     (with-jni-scope
-     (λ ()
-       (send (require-jni-env) PushLocalFrame capacity)
-       (define result (thunk))
-       (values
-        result
-        (send (require-jni-env) PopLocalFrame (and result (send result get-pointer)))))))
+      (λ ()
+        (send (require-jni-env) PushLocalFrame capacity)
+        (with-handlers
+            ([exn:fail:jni:throw?
+              (λ (e)
+                (define old-throwable (exn:fail:jni:throw-object e))
+                (define new-throwable
+                  (send old-throwable
+                        clone-with-new-pointer
+                        (send (require-jni-env) PopLocalFrame (send old-throwable get-pointer))))
+                (raise (struct-copy exn:fail:jni:throw
+                                    e
+                                    [object new-throwable])))])
+          (define result (thunk))
+          (values
+           result
+           (send (require-jni-env) PopLocalFrame (and result (send result get-pointer))))))))
   (and new-ptr (send old-ref clone-with-new-pointer new-ptr)))
 
 ; references

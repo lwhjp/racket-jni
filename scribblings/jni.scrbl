@@ -171,6 +171,11 @@ If you're familiar with JNI and the Racket FFI, try this to get started:
   Causes the JVM to exit immediately, taking your Racket process with it.
 }
 
+@defproc[(jni-check-exception) void?]{
+  Checks whether a Java exception is pending, and throws an instance of
+  @racket[exn:fail:jni:throw] if so.
+}
+
 @subsection{References}
 @definterface[reference<%> ()]{
   This interface represents a reference to a Java object.
@@ -193,6 +198,33 @@ If you're familiar with JNI and the Racket FFI, try this to get started:
   @defmethod[(get-pointer) jobject?]{
     Returns a pointer to the referenced object. Best not to use this unless you know what you're doing.
   }
+}
+
+@section{Errors}
+
+Certain JNI methods signal an error in their return code. If the error is due to a thrown Java
+exception, the wrapper will raise an instance of @racket[exn:fail:jni:throw]. In other cases, a
+numeric error code is returned and the wrapper raises @racket[exn:fail:jni:error].
+
+Not all JNI functions check for exceptions. You can call @racket[jni-check-exception] to explicitly
+check and raise a Racket-side exception if a Java exception is pending.
+
+Java exceptions remain "active" until they are cancelled. If you catch and handle an instance of
+@racket[exn:fail:jni:throw], you should also call @racket[jni-clear-exception!] to prevent the
+exception from propagating when control returns to the Java side.
+
+@defstruct[(exn:fail:jni exn:fail) ()]{
+  Supertype for all JNI errors.
+}
+
+@defstruct[(exn:fail:jni:error exn:fail:jni) ([code exact-integer?])]{
+  Represents an error return code from a JNI function.
+  See the JNI documentation for the interpretation of @racket[code].
+}
+
+@defstruct[(exn:fail:jni:throw exn:fail:jni) ([object (is-a?/c jthrowable%)])]{
+  Represents a thrown Java exception. The exception will be propagated back to the Java side
+  unless @racket[jni-clear-exception!] is called.
 }
 
 @section{Attaching to the JVM}
@@ -416,15 +448,4 @@ used incorrectly.
        [signature _string/modified-utf-8]
        [fnPtr _fpointer]))
   ]
-}
-
-@subsection{Errors}
-
-Certain methods in @racket[JavaVM<%>] and @racket[JNIEnv<%>] signal an error in their return code.
-In this case, the wrapper will raise an instance of @racket[exn:fail:jni]. Note that this does not
-correspond to a Java exception---these need to be handled explicity.
-
-@defstruct[(exn:fail:jni exn:fail) ([code exact-integer?])]{
-  Represents an error return code from a JNI function.
- See the JNI documentation for the interpretation of @racket[code].
 }

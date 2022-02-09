@@ -5,6 +5,7 @@
          racket/string
          ffi/unsafe
          "env.rkt"
+         "error.rkt"
          "signature.rkt"
          "types.rkt")
 
@@ -25,7 +26,8 @@
          jni-get-exception
          jni-describe-exception
          jni-clear-exception!
-         jni-fatal-error!)
+         jni-fatal-error!
+         jni-check-exception)
 
 (define (signature-return-type sig)
   (match sig
@@ -105,7 +107,7 @@
     (define/public (same-object? obj)
       (send (require-jni-env) IsSameObject (get-pointer) (send obj get-pointer)))
     (define/public (get-field-id name sig)
-      (field-id (send (require-jni-env) GetFieldID (get-pointer) name sig)
+      (field-id (return/throw (send (require-jni-env) GetFieldID (get-pointer) name sig))
                 (parse-signature sig)))
     (define/public (get-field f)
       (wrap/sig
@@ -123,40 +125,45 @@
                         (send v get-pointer)
                         v)))
     (define/public (get-method-id name sig)
-      (method-id (send (require-jni-env) GetMethodID (get-pointer) name sig)
+      (method-id (return/throw (send (require-jni-env) GetMethodID (get-pointer) name sig))
                  (parse-signature sig)))
     (define/public (call-method m . args)
       (wrap/sig
        (method-id-sig m)
-       (dynamic-send (require-jni-env)
-                     (signature->method-name (method-id-sig m) "Call_T_MethodA")
-                     (get-pointer)
-                     (method-id-ptr m)
-                     (unwrap-args args))))
+       (return/throw
+        (dynamic-send (require-jni-env)
+                      (signature->method-name (method-id-sig m) "Call_T_MethodA")
+                      (get-pointer)
+                      (method-id-ptr m)
+                      (unwrap-args args)))))
     (define/public (call-nonvirtual-method m c . args)
       (wrap/sig
        (method-id-sig m)
-       (dynamic-send (require-jni-env)
-                     (signature->method-name (method-id-sig m) "CallNonvirtual_T_MethodA")
-                     (get-pointer)
-                     (send c get-pointer)
-                     (method-id-ptr m)
-                     (unwrap-args args))))
+       (return/throw
+        (dynamic-send (require-jni-env)
+                      (signature->method-name (method-id-sig m) "CallNonvirtual_T_MethodA")
+                      (get-pointer)
+                      (send c get-pointer)
+                      (method-id-ptr m)
+                      (unwrap-args args)))))
     (define/public (monitor-enter)
       (send (require-jni-env) MonitorEnter (get-pointer)))
     (define/public (monitor-exit)
       (send (require-jni-env) MonitorExit (get-pointer)))))
 
 (define (jni-alloc-object class)
-  (wrap-object/local (send (require-jni-env) AllocObject (send class get-pointer))))
+  (wrap-object/local
+   (return/throw
+    (send (require-jni-env) AllocObject (send class get-pointer)))))
 
 (define (jni-new-object class ctor . args)
   (wrap-object/local
-   (send (require-jni-env)
-         NewObjectA
-         (send class get-pointer)
-         (method-id-ptr ctor)
-         (unwrap-args args))))
+   (return/throw
+    (send (require-jni-env)
+          NewObjectA
+          (send class get-pointer)
+          (method-id-ptr ctor)
+          (unwrap-args args)))))
 
 (define jclass%
   (class jobject%
@@ -167,7 +174,7 @@
     (define/public (assignable-from? cls)
       (send (require-jni-env) IsAssignableFrom (send cls get-pointer) (get-pointer)))
     (define/public (get-static-field-id name sig)
-      (field-id (send (require-jni-env) GetFieldID (get-pointer) name sig)
+      (field-id (return/throw (send (require-jni-env) GetFieldID (get-pointer) name sig))
                 (parse-signature sig)))
     (define/public (get-static-field f)
       (wrap/sig
@@ -185,27 +192,31 @@
                         (send v get-pointer)
                         v)))
     (define/public (get-static-method-id name sig)
-      (method-id (send (require-jni-env) GetStaticMethodID (get-pointer) name sig)
+      (method-id (return/throw (send (require-jni-env) GetStaticMethodID (get-pointer) name sig))
                  (parse-signature sig)))
     (define/public (call-static-method m . args)
       (wrap/sig
        (method-id-sig m)
-       (dynamic-send (require-jni-env)
-                     (signature->method-name (method-id-sig m) "CallStatic_T_MethodA")
-                     (get-pointer)
-                     (method-id-ptr m)
-                     (unwrap-args args))))))
+       (return/throw
+        (dynamic-send (require-jni-env)
+                      (signature->method-name (method-id-sig m) "CallStatic_T_MethodA")
+                      (get-pointer)
+                      (method-id-ptr m)
+                      (unwrap-args args)))))))
 
 (define (jni-define-class name buf [loader #f])
   (wrap-class/local
-   (send (require-jni-env)
-         DefineClass
-         name
-         (and loader (send loader get-pointer))
-         buf)))
+   (return/throw
+    (send (require-jni-env)
+          DefineClass
+          name
+          (and loader (send loader get-pointer))
+          buf))))
 
 (define (jni-find-class name)
-  (wrap-class/local (send (require-jni-env) FindClass name)))
+  (wrap-class/local
+   (return/throw
+    (send (require-jni-env) FindClass name))))
 
 (define jstring%
   (class jobject%
@@ -229,7 +240,7 @@
 (define (jni-new-string str)
   (wrap/local jstring%
               _jstring
-              (send (require-jni-env) NewStringUTF8 str)))
+              (return/throw (send (require-jni-env) NewStringUTF8 str))))
 
 ; TODO: arrays
 
@@ -260,3 +271,14 @@
 
 (define (jni-fatal-error! [msg #f])
   (send (require-jni-env) FatalError msg))
+
+(define (jni-check-exception)
+  (let ([t (jni-get-exception)])
+    (when t
+      (raise (exn:fail:jni:throw "Java exception"
+                                 (current-continuation-marks)
+                                 t)))))
+
+(define (return/throw v)
+  (jni-check-exception)
+  v)

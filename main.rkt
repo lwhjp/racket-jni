@@ -1,8 +1,7 @@
 #lang racket/base
 
-(provide (all-from-out "private/env.rkt"))
-
 (require "private/env.rkt"
+         "private/error.rkt"
          "private/object.rkt")
 
 (provide current-jni-env
@@ -12,4 +11,7 @@
          with-jni-scope
          with-jni-frame
          reference<%>
+         (struct-out exn:fail:jni)
+         (struct-out exn:fail:jni:error)
+         (struct-out exn:fail:jni:throw)
          (all-from-out "private/object.rkt"))
