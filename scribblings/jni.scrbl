@@ -4,6 +4,7 @@
 @(require (for-label racket/base
                      racket/class
                      racket/contract/base
+                     (except-in ffi/unsafe ->)
                      jni
                      jni/unsafe))
 
@@ -130,6 +131,58 @@ If you're familiar with JNI and the Racket FFI, try this to get started:
 
 @defproc[(jni-new-string [str string?]) (is-a?/c jstring%)]{
   Creates a new Java string.
+}
+
+@subsubsection{Arrays}
+
+@defclass[jarray% jobject% ()]{
+  @defmethod[(get-length) exact-nonnegative-integer?]
+}
+
+@defclass[jarray/object% jarray% ()]{
+  @defmethod[(get-element [index exact-nonnegative-integer?])
+             (or/c (is-a?/c jobject%) #f)]
+  @defmethod[(set-element! [index exact-nonnegative-integer?]
+                           [value (or/c (is-a?/c jobject%) #f)])
+             void?]
+}
+
+@defproc[(jni-new-object-array [length exact-nonnegative-integer?]
+                               [element-class (is-a?/c jclass%)]
+                               [initial-element (or/c (is-a?/c jobject%) #f) #f])
+         (is-a?/c jarray/object%)]{
+  Creates a new object array filled with @racket[initial-element].
+}
+
+@defclass[jarray/primitive% jarray% ()]{
+  @defmethod[(call-with-elements/critical [mode exact-integer?]
+                                          [proc (-> cpointer? any)])
+             any]{
+    Calls @racket[proc] with a pointer to the array contents, using
+    @tt{GetPrimitiveArrayCritical}. Be careful with this: if something
+    goes wrong you can break the JVM.
+  }
+
+  @defmethod[(copy-to-vector! [start exact-nonnegative-integer?]
+                              [end exact-nonnegative-integer?]
+                              [dest vector?]
+                              [dest-start exact-nonnegative-integer? 0])
+             void?]
+  @defmethod[(copy-from-vector! [start exact-nonnegative-integer?]
+                                [end exact-nonnegative-integer?]
+                                [src vector?]
+                                [src-start exact-nonnegative-integer? 0])
+             void?]
+  @defmethod[(get-region [start exact-nonnegative-integer?]
+                         [end exact-nonnegative-integer?])
+             vector?]
+}
+
+@defproc[(jni-new-primitive-array [length exact-nonnegative-integer?]
+                                  [type (or/c 'boolean 'byte 'char 'short
+                                              'int 'long 'float 'double)])
+         (is-a?/c jarray/primitive%)]{
+  Creates a new primitive array.
 }
 
 @subsubsection{Exceptions (@tt{Throwable})}
@@ -263,7 +316,6 @@ These functions are dangerous, and may change or be removed.
 @section{Low Level Interface}
 
 @defmodule[jni/unsafe]
-@(require (for-label (except-in ffi/unsafe ->)))
 
 These interfaces provide access to the raw C API with minimal wrapping.
 Needless to say, it is easy to cause memory corruption and crashes if

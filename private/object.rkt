@@ -19,6 +19,11 @@
          jni-find-class
          jstring%
          jni-new-string
+         jarray%
+         jarray/object%
+         jni-new-object-array
+         jarray/primitive%
+         jni-new-primitive-array
          jthrowable%
          jni-throw
          jni-throw/new
@@ -33,6 +38,11 @@
   (match sig
     [`(method ,_ ,r) r]
     [_ sig]))
+
+(define (array-signature? sig)
+  (match (signature-return-type sig)
+    [`(array ,_) #t]
+    [_ #f]))
 
 (define (object-signature? sig)
   (match (signature-return-type sig)
@@ -51,11 +61,23 @@
          (symbol->string t))
         "Object"))))
 
+(define (array-types type)
+  (case type
+      [(boolean) (values _jboolean _jbooleanArray)]
+      [(byte) (values _jbyte _jbyteArray)]
+      [(char) (values _jchar _jcharArray)]
+      [(short) (values _jshort _jshortArray)]
+      [(int) (values _jint _jintArray)]
+      [(long) (values _jlong _jlongArray)]
+      [(float) (values _jfloat _jfloatArray)]
+      [(double) (values _jdouble _jdoubleArray)]
+      [else (raise-argument-error 'jni-new-primitive-array "valid type" type)]))
+
 (define (wrap/sig sig v)
-  ; TODO: arrays
-  (if (object-signature? sig)
-      (wrap-object/local v)
-      v))
+  (cond
+    [(array-signature? sig) (wrap-array/local (signature-return-type sig) v)]
+    [(object-signature? sig) (wrap-object/local v)]
+    [else v]))
 
 (define (wrap/local c% _t p)
   (and p
@@ -69,6 +91,18 @@
 
 (define (wrap-class/local ptr)
   (wrap/local jclass% _jclass ptr))
+
+(define (wrap-array/local sig ptr)
+  (match-define `(array ,t) sig)
+  (and ptr
+       (if (symbol? t)
+           (let-values ([(_element _array) (array-types t)])
+             (new jarray/primitive%
+                  [_element _element]
+                  [ref (new local-reference%
+                            [_type _array]
+                            [pointer ptr])]))
+           (wrap/local jarray/object% _jobjectArray ptr))))
 
 (struct field-id (ptr sig))
 (struct method-id (ptr sig))
@@ -242,7 +276,68 @@
               _jstring
               (return/throw (send (require-jni-env) NewStringUTF8 str))))
 
-; TODO: arrays
+(define jarray%
+  (class jobject%
+    (inherit get-pointer)
+    (super-new)
+    (define/public (get-length)
+      (send (require-jni-env) GetArrayLength (get-pointer)))))
+
+(define jarray/object%
+  (class jarray%
+    (inherit get-pointer)
+    (super-new)
+    (define/public (get-element index)
+      (wrap-object/local
+       (send (require-jni-env) GetObjectArrayElement (get-pointer) index)))
+    (define/public (set-element! index value)
+      (send (require-jni-env) SetObjectArrayElement (get-pointer) index (send value get-pointer)))))
+
+(define (jni-new-object-array length element-class [initial-element #f])
+  (wrap/local jarray/object%
+              _jobjectArray
+              (return/throw
+               (send (require-jni-env)
+                     NewObjectArray
+                     length
+                     (send element-class get-pointer)
+                     (and initial-element (send initial-element get-pointer))))))
+
+(define jarray/primitive%
+  (class jarray%
+    (init-field _element)
+    (inherit get-pointer)
+    (super-new)
+    (define (call-with-elements/critical mode proc)
+      (define p
+        (return/throw
+         (let-values ([(p copy?) (send (require-jni-env) GetPrimitiveArrayCritical (get-pointer))])
+           p)))
+      (begin0
+        (proc p)
+        (send (require-jni-env) ReleasePrimitiveArrayCritical (get-pointer) p mode)))
+    (define/public (copy-to-vector! start end dest [dest-start 0])
+      (call-with-elements/critical JNI_ABORT
+        (λ (p)
+          (for ([i (in-range (- end start))])
+            (vector-set! dest (+ dest-start i) (ptr-ref p _element (+ start i)))))))
+    (define/public (copy-from-vector! start end src [src-start 0])
+      (call-with-elements/critical JNI_COMMIT
+        (λ (p)
+          (for ([i (in-range (- end start))])
+            (ptr-set! p _element (+ start i) (vector-ref src (+ src-start i)))))))
+    (define/public (get-region start end)
+      (let ([v (make-vector (- end start) #f)])
+        (copy-to-vector! start end v)
+        v))))
+
+(define (jni-new-primitive-array length type)
+  (wrap-array/local
+   type
+   (return/throw
+    (dynamic-send (require-jni-env)
+                  (signature->method-name type "New_T_Array")
+                  length))))
 
 (define jthrowable%
   (class jobject%
