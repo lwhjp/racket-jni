@@ -23,6 +23,14 @@
          jarray/object%
          jni-new-object-array
          jarray/primitive%
+         jarray/boolean%
+         jarray/byte%
+         jarray/char%
+         jarray/short%
+         jarray/int%
+         jarray/long%
+         jarray/float%
+         jarray/double%
          jni-new-primitive-array
          jthrowable%
          jni-throw
@@ -63,14 +71,14 @@
 
 (define (array-types type)
   (case type
-      [(boolean) (values _jboolean _jbooleanArray)]
-      [(byte) (values _jbyte _jbyteArray)]
-      [(char) (values _jchar _jcharArray)]
-      [(short) (values _jshort _jshortArray)]
-      [(int) (values _jint _jintArray)]
-      [(long) (values _jlong _jlongArray)]
-      [(float) (values _jfloat _jfloatArray)]
-      [(double) (values _jdouble _jdoubleArray)]
+      [(boolean) (values jarray/boolean% _jbooleanArray)]
+      [(byte) (values jarray/byte% _jbyteArray)]
+      [(char) (values jarray/char% _jcharArray)]
+      [(short) (values jarray/short% _jshortArray)]
+      [(int) (values jarray/int% _jintArray)]
+      [(long) (values jarray/long% _jlongArray)]
+      [(float) (values jarray/float% _jfloatArray)]
+      [(double) (values jarray/double% _jdoubleArray)]
       [else (raise-argument-error 'jni-new-primitive-array "valid type" type)]))
 
 (define (wrap/sig sig v)
@@ -96,9 +104,8 @@
   (match-define `(array ,t) sig)
   (and ptr
        (if (symbol? t)
-           (let-values ([(_element _array) (array-types t)])
-             (new jarray/primitive%
-                  [_element _element]
+           (let-values ([(array% _array) (array-types t)])
+             (new array%
                   [ref (new local-reference%
                             [_type _array]
                             [pointer ptr])]))
@@ -330,6 +337,16 @@
       (let ([v (make-vector (- end start) #f)])
         (copy-to-vector! start end v)
         v))))
+
+(define-values (jarray/boolean% jarray/byte% jarray/char% jarray/short%
+                jarray/int% jarray/long% jarray/float% jarray/double%)
+  (apply
+   values
+   (map (λ (_element)
+          (class jarray/primitive%
+            (super-new [_element _element])))
+        (list _jboolean _jbyte _jchar _jshort
+              _jint _jlong _jfloat _jdouble))))
 
 (define (jni-new-primitive-array length type)
   (wrap-array/local

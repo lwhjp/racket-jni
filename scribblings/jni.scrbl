@@ -155,6 +155,7 @@ If you're familiar with JNI and the Racket FFI, try this to get started:
 }
 
 @defclass[jarray/primitive% jarray% ()]{
+  Base class for Java primitive arrays.
   @defmethod[(call-with-elements/critical [mode exact-integer?]
                                           [proc (-> cpointer? any)])
              any]{
@@ -176,6 +177,17 @@ If you're familiar with JNI and the Racket FFI, try this to get started:
   @defmethod[(get-region [start exact-nonnegative-integer?]
                          [end exact-nonnegative-integer?])
              vector?]
+}
+
+@defthing*[([jarray/boolean% (subclass?/c jarray/primitive%)]
+            [jarray/byte% (subclass?/c jarray/primitive%)]
+            [jarray/char% (subclass?/c jarray/primitive%)]
+            [jarray/short% (subclass?/c jarray/primitive%)]
+            [jarray/int% (subclass?/c jarray/primitive%)]
+            [jarray/long% (subclass?/c jarray/primitive%)]
+            [jarray/float% (subclass?/c jarray/primitive%)]
+            [jarray/double% (subclass?/c jarray/primitive%)])]{
+  Java primitive arrays of each type.
 }
 
 @defproc[(jni-new-primitive-array [length exact-nonnegative-integer?]
