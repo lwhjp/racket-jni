@@ -40,7 +40,8 @@
          jni-describe-exception
          jni-clear-exception!
          jni-fatal-error!
-         jni-check-exception)
+         jni-check-exception
+         jobject-cast)
 
 (define (signature-return-type sig)
   (match sig
@@ -394,3 +395,29 @@
 (define (return/throw v)
   (jni-check-exception)
   v)
+
+; cast
+
+(define jobject-type-map
+  (hash
+   jobject% _jobject
+   jclass% _jclass
+   jstring% _jstring
+   jarray/object% _jobjectArray
+   jarray/boolean% _jbooleanArray
+   jarray/byte% _jbyteArray
+   jarray/char% _jcharArray
+   jarray/short% _jshortArray
+   jarray/int% _jintArray
+   jarray/long% _jlongArray
+   jarray/float% _jfloatArray
+   jarray/double% _jdoubleArray
+   jthrowable% _jthrowable))
+
+(define (jobject-cast obj type%)
+  (define old-ref (get-field ref obj))
+  (define ptr (get-field pointer old-ref))
+  (define new-type (hash-ref jobject-type-map type%))
+  (define new-ref (send old-ref clone-with-pointer (cast ptr _pointer new-type)))
+  (set-field! _type new-ref new-type)
+  (new type% [ref new-ref]))

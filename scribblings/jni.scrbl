@@ -241,6 +241,20 @@ If you're familiar with JNI and the Racket FFI, try this to get started:
   @racket[exn:fail:jni:throw] if so.
 }
 
+@subsection{Casts}
+
+If you have an instance of @racket[jobject%], say, but you know that on the Java
+side it is really a @tt{String}, it is possible to cast the object to an instance
+of @racket[jstring%]. No type checking is performed: if you make an invalid cast,
+things will blow up later on.
+
+@defproc[(jobject-cast [obj (is-a?/c jobject%)]
+                       [type% (subclass?/c jobject%)])
+         (is-a?/c type%)]{
+  Convert @racket[obj] (which may be an instance of any wrapped type) to an instance
+  of @racket[type%]. Local/global references are preserved.
+}
+
 @subsection{References}
 @definterface[reference<%> ()]{
   This interface represents a reference to a Java object.
