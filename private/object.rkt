@@ -283,7 +283,7 @@
 (define (jni-new-string str)
   (wrap/local jstring%
               _jstring
-              (return/throw (send (require-jni-env) NewStringUTF8 str))))
+              (return/throw (send (require-jni-env) NewStringUTF str))))
 
 (define jarray%
   (class jobject%
