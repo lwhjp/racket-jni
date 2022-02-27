@@ -84,9 +84,11 @@
       [else (raise-argument-error 'jni-new-primitive-array "valid type" type)]))
 
 (define (wrap/sig sig v)
-  (cond
-    [(array-signature? sig) (wrap-array/local (signature-return-type sig) v)]
-    [(object-signature? sig) (wrap-object/local v)]
+  (define r (signature-return-type sig))
+  (match r
+    [`(array ,_) (wrap-array/local r v)]
+    [`(object "java.lang.String") (wrap-string/local (cast v _jobject _jstring))]
+    [`(object ,_) (wrap-object/local v)]
     [else v]))
 
 (define (wrap/local c% _t p)
@@ -98,6 +100,9 @@
 
 (define (wrap-object/local ptr)
   (wrap/local jobject% _jobject ptr))
+
+(define (wrap-string/local ptr)
+  (wrap/local jstring% _jstring ptr))
 
 (define (wrap-class/local ptr)
   (wrap/local jclass% _jclass ptr))
