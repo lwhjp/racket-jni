@@ -43,6 +43,24 @@ If you're familiar with JNI and the Racket FFI, try this to get started:
       (send s delete))))
 }|
 
+@subsection{Implementing Native Methods}
+
+See @tt{example/NativeGreet.java} for a simple Java class with a native method. This can be
+compiled to a class file like so:
+@verbatim|{
+$ javac --release 10 example/NativeGreet.java
+}|
+Note that we work in the top-level folder of this package due to the way in which the JRE
+searches for classes.
+
+@tt{example/native-greet.rkt} shows how we can implement the native method in this class
+as a Racket function. In this example, we attach to the JVM, load the class compiled above,
+register the native method and call a Java method which in turn calls our Racket method.
+@verbatim|{
+$ racket example/native-greet.rkt
+Java said: "hello, Racket"
+}|
+
 @section{High-level wrappers}
 
 @subsection{Object wrappers}

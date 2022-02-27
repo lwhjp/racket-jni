@@ -8,6 +8,7 @@
          require-jni-env
          with-jni-env
          let-jni-env
+         get-jni-env
          with-jni-scope
          with-jni-frame
          reference<%>

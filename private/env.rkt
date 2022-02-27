@@ -5,7 +5,8 @@
          "error.rkt"
          "jni.rkt")
 
-(provide (all-defined-out))
+(provide (all-defined-out)
+         get-jni-env)
 
 (define local-jni-env (make-thread-cell #f #f))
 
