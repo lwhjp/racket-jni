@@ -6,6 +6,7 @@
          ffi/unsafe
          "env.rkt"
          "error.rkt"
+         "jni.rkt"
          "signature.rkt"
          "types.rkt")
 
@@ -60,6 +61,20 @@
     [`(object ,_) #t]
     [_ #f]))
 
+(define (signature->ctype sig)
+  (match sig
+    [`(array ,_) _jarray]
+    [`(object ,_) _jobject]
+    ['boolean _jboolean]
+    ['byte _jbyte]
+    ['char _jchar]
+    ['short _jshort]
+    ['int _jint]
+    ['long _jlong]
+    ['float _jfloat]
+    ['double _jdouble]
+    ['void _void]))
+
 (define (signature->method-name sig template)
   (define t (signature-return-type sig))
   (string->symbol
@@ -82,6 +97,13 @@
       [(float) (values jarray/float% _jfloatArray)]
       [(double) (values jarray/double% _jdoubleArray)]
       [else (raise-argument-error 'jni-new-primitive-array "valid type" type)]))
+
+(define (signature-args sig)
+  (match sig
+    [(list 'method (list args ...) _) args]))
+
+(define (wrap-args/sig sig vs)
+  (map wrap/sig (signature-args sig) vs))
 
 (define (wrap/sig sig v)
   (define r (signature-return-type sig))
@@ -118,15 +140,35 @@
                             [pointer ptr])]))
            (wrap/local jarray/object% _jobjectArray ptr))))
 
+(define (wrap-fun sig proc)
+  (function-ptr
+   (λ (env obj . args)
+     (with-jni-env env
+       (λ ()
+         (with-jni-scope
+           (λ ()
+             (unwrap
+              (apply proc
+                     (wrap-object/local obj)
+                     (wrap-args/sig sig args))))))))
+   (_cprocedure (list* _JNIEnv
+                       _jobject
+                       (map signature->ctype (signature-args sig)))
+                (signature->ctype (signature-return-type sig)))))
+
+(define (make-native-fun name sig proc)
+  (make-JNINativeMethod
+   name
+   sig
+   (wrap-fun (parse-signature sig) proc)))
+
 (struct field-id (ptr sig))
 (struct method-id (ptr sig))
 
-(define (unwrap-args args)
-  (map (λ (v)
-         (if (is-a? v jobject%)
-             (send v get-pointer)
-             v))
-       args))
+(define (unwrap v)
+  (if (is-a? v jobject%)
+      (send v get-pointer)
+      v))
 
 (define jobject%
   (class* object% (reference<%>)
@@ -183,7 +225,7 @@
                       (signature->method-name (method-id-sig m) "Call_T_MethodA")
                       (get-pointer)
                       (method-id-ptr m)
-                      (unwrap-args args)))))
+                      (map unwrap args)))))
     (define/public (call-nonvirtual-method m c . args)
       (wrap/sig
        (method-id-sig m)
@@ -193,7 +235,7 @@
                       (get-pointer)
                       (send c get-pointer)
                       (method-id-ptr m)
-                      (unwrap-args args)))))
+                      (map unwrap args)))))
     (define/public (monitor-enter)
       (send (require-jni-env) MonitorEnter (get-pointer)))
     (define/public (monitor-exit)
@@ -211,7 +253,7 @@
           NewObjectA
           (send class get-pointer)
           (method-id-ptr ctor)
-          (unwrap-args args)))))
+          (map unwrap args)))))
 
 (define jclass%
   (class jobject%
@@ -250,7 +292,14 @@
                       (signature->method-name (method-id-sig m) "CallStatic_T_MethodA")
                       (get-pointer)
                       (method-id-ptr m)
-                      (unwrap-args args)))))))
+                      (map unwrap args)))))
+        (define/public (register-natives! methods)
+      (send (require-jni-env)
+            RegisterNatives
+            (get-pointer)
+            (map (λ (m) (apply make-native-fun m)) methods)))
+    (define/public (unregister-natives!)
+      (send (require-jni-env) UnregisterNatives (get-pointer)))))
 
 (define (jni-define-class name buf [loader #f])
   (wrap-class/local

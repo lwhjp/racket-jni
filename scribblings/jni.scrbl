@@ -104,6 +104,16 @@ If you're familiar with JNI and the Racket FFI, try this to get started:
   @defmethod[(set-static-field! [f field-id?] [v any/c]) void?]
   @defmethod[(get-static-method-id [name string?] [sig string?]) method-id?]
   @defmethod[(call-static-method [m method-id?] [arg any/c] ...) any/c]
+  @defmethod[(register-natives! [methods (listof (list/c string? string? procedure?))]) void?]{
+    Registers Racket procedures as native methods of this class. The
+    @racket[methods] argument is a list of the form
+    @racket[(_name _signature _proc)], where @racket[_name] is the method name,
+    @racket[_signature] is a JNI signature string, and @racket[_proc] is the
+    procedure implementing the method. @racket[_proc] must take at least one
+    argument, which is the @tt{this} reference. Additional arguments must match
+    the signature.
+  }
+  @defmethod[(unregister-natives!) void?]
 }
 
 @defproc[(jni-define-class [name string?]
