@@ -236,6 +236,12 @@ If you're familiar with JNI and the Racket FFI, try this to get started:
   Causes the JVM to exit immediately, taking your Racket process with it.
 }
 
+@defthing[current-jni-dump-exceptions? parameter?]{
+  When this parameter is any value other than @racket[#f], Java exceptions
+  thrown by @racket[jni-check-exception] will be dumped to the console
+  using @racket[jni-describe-exception]. The default values is @racket[#f].
+}
+
 @defproc[(jni-check-exception) void?]{
   Checks whether a Java exception is pending, and throws an instance of
   @racket[exn:fail:jni:throw] if so.

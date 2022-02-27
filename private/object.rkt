@@ -40,6 +40,7 @@
          jni-describe-exception
          jni-clear-exception!
          jni-fatal-error!
+         current-jni-dump-exceptions?
          jni-check-exception
          jobject-cast)
 
@@ -385,9 +386,14 @@
 (define (jni-fatal-error! [msg #f])
   (send (require-jni-env) FatalError msg))
 
+(define current-jni-dump-exceptions?
+  (make-parameter #f))
+
 (define (jni-check-exception)
   (let ([t (jni-get-exception)])
     (when t
+      (when (current-jni-dump-exceptions?)
+        (jni-describe-exception))
       (raise (exn:fail:jni:throw "Java exception"
                                  (current-continuation-marks)
                                  t)))))
